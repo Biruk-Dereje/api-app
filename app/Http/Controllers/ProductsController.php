@@ -4,10 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\Products;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
-class ProductsController extends Controller
+class ProductsController extends Controller implements HasMiddleware
 {
+
+    public static function middleware()
+    {
+        return [
+            new Middleware('auth:sanctum', except: ['inddex', 'show'])
+        ];
+    }
     /**
      * Display a listing of the resource.
      */
@@ -26,7 +36,7 @@ class ProductsController extends Controller
             'body' => 'required'
         ]);
 
-        $products = Products::create($fields);
+        $products = $request->user()->products()->create($fields);
 
         return $products;
     }
@@ -49,10 +59,12 @@ class ProductsController extends Controller
 
      public function update(Request $request, string $id)
     {
-        $product = products::find($id);
-        $product->update($request->all());
+        $products = products::find($id);
+        $products->update($request->all());
 
-        return $product;
+        Gate::authorize('modify', $products);
+
+        return $products;
     }
     
     /**
@@ -62,6 +74,8 @@ class ProductsController extends Controller
     {
         $product = products::find($id);
         $product->delete();
+
+        Gate::authorize('modify', $products);
 
         return response()->json(['message' => 'Product deleted successfully'], 200);
     }
